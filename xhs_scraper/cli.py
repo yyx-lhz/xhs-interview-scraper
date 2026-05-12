@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import asyncio
 import typer
+from sqlmodel import select
 
 from . import config
-from .db import init_db
+from .db import init_db, get_session, Note
 from .scraper import run_scrape
+from .positions import detect_positions
 
 app = typer.Typer(help="Xiaohongshu interview-experience scraper.")
 
@@ -43,6 +45,30 @@ def scrape(
     typer.echo("\n=== summary ===")
     for company, count in results.items():
         typer.echo(f"  {company:<10s}  {count}")
+
+
+@app.command()
+def backfill() -> None:
+    """Recompute positions for existing rows and parse published_ts from published_at."""
+    init_db()
+    updated = 0
+    with get_session() as s:
+        rows = s.exec(select(Note)).all()
+        for n in rows:
+            new_positions = detect_positions([n.title or "", n.content or "", " ".join(n.tags or [])])
+            new_ts = n.published_ts
+            if not new_ts and n.published_at:
+                try:
+                    new_ts = int(n.published_at)
+                except (TypeError, ValueError):
+                    new_ts = None
+            if new_positions != (n.positions or []) or new_ts != n.published_ts:
+                n.positions = new_positions
+                n.published_ts = new_ts
+                s.add(n)
+                updated += 1
+        s.commit()
+    typer.echo(f"Backfilled {updated} of {len(rows)} notes.")
 
 
 @app.command()

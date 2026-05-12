@@ -1,25 +1,65 @@
 {% extends "base.html" %}
+{% macro qs(extra={}) -%}
+{%- set merged = {'company': selected_company, 'q': q, 'position': selected_position, 'time': selected_time} -%}
+{%- for k, v in extra.items() %}{% set _ = merged.update({k: v}) %}{% endfor -%}
+{%- set parts = [] -%}
+{%- for k, v in merged.items() -%}
+  {%- if v and v != 'all' -%}{% set _ = parts.append(k ~ '=' ~ v) %}{%- endif -%}
+{%- endfor -%}
+{{ '?' ~ parts|join('&') if parts else '' }}
+{%- endmacro %}
 {% block content %}
 <div class="layout">
   <aside class="sidebar">
-    <h3>公司</h3>
-    <ul class="company-list">
-      <li class="{% if not selected_company %}active{% endif %}">
-        <a href="/{% if q %}?q={{ q }}{% endif %}">全部</a>
-      </li>
-      {% for name, count in companies %}
-      <li class="{% if selected_company == name %}active{% endif %}">
-        <a href="/?company={{ name }}{% if q %}&q={{ q }}{% endif %}">
-          {{ name }} <span class="count">{{ count }}</span>
-        </a>
-      </li>
-      {% endfor %}
-    </ul>
+    <div class="filter-group">
+      <h3>时间</h3>
+      <ul class="chip-list">
+        {% for value, label in time_labels %}
+        <li class="{% if selected_time == value %}active{% endif %}">
+          <a href="/{{ qs({'time': value, 'page': none}) }}">{{ label }}</a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="filter-group">
+      <h3>岗位</h3>
+      <ul class="chip-list">
+        <li class="{% if not selected_position %}active{% endif %}">
+          <a href="/{{ qs({'position': none, 'page': none}) }}">全部</a>
+        </li>
+        {% for name, count in positions %}
+        <li class="{% if selected_position == name %}active{% endif %} {% if count == 0 %}dim{% endif %}">
+          <a href="/{{ qs({'position': name, 'page': none}) }}">
+            {{ name }} <span class="count">{{ count }}</span>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
+
+    <div class="filter-group">
+      <h3>公司</h3>
+      <ul class="company-list">
+        <li class="{% if not selected_company %}active{% endif %}">
+          <a href="/{{ qs({'company': none, 'page': none}) }}">全部</a>
+        </li>
+        {% for name, count in companies %}
+        <li class="{% if selected_company == name %}active{% endif %}">
+          <a href="/{{ qs({'company': name, 'page': none}) }}">
+            {{ name }} <span class="count">{{ count }}</span>
+          </a>
+        </li>
+        {% endfor %}
+      </ul>
+    </div>
   </aside>
 
   <section class="main">
     <form class="search" method="get" action="/">
       {% if selected_company %}<input type="hidden" name="company" value="{{ selected_company }}" />{% endif %}
+      {% if selected_position %}<input type="hidden" name="position" value="{{ selected_position }}" />{% endif %}
+      {% if selected_time and selected_time != 'all' %}<input type="hidden" name="time" value="{{ selected_time }}" />{% endif %}
       <input type="text" name="q" placeholder="搜标题/正文…" value="{{ q }}" />
       <button type="submit">搜索</button>
     </form>
@@ -27,6 +67,8 @@
     <div class="meta">
       共 {{ total }} 条 · 第 {{ page }} / {{ total_pages }} 页
       {% if selected_company %}· 公司：<b>{{ selected_company }}</b>{% endif %}
+      {% if selected_position %}· 岗位：<b>{{ selected_position }}</b>{% endif %}
+      {% if selected_time and selected_time != 'all' %}· 时间：<b>{{ selected_time }}</b>{% endif %}
       {% if q %}· 关键字：<b>{{ q }}</b>{% endif %}
     </div>
 
@@ -36,22 +78,24 @@
         <a href="/note/{{ n.note_id }}" class="note-title">{{ n.title or '(无标题)' }}</a>
         <div class="note-meta">
           <span class="badge">{{ n.company }}</span>
+          {% for p in (n.positions or []) %}<span class="badge alt">{{ p }}</span>{% endfor %}
           <span>👍 {{ n.likes }}</span>
           <span>💬 {{ n.comments }}</span>
           <span>⭐ {{ n.collects }}</span>
           {% if n.author_name %}<span>· {{ n.author_name }}</span>{% endif %}
+          {% if n.published_ts %}<span>· {{ (n.published_ts / 1000)|int|datetimeformat }}</span>{% endif %}
         </div>
         <p class="note-snippet">{{ (n.content or '')[:160] }}{% if (n.content or '')|length > 160 %}…{% endif %}</p>
       </li>
       {% else %}
-      <li class="empty">还没有数据，先跑 <code>xhs scrape</code></li>
+      <li class="empty">没找到匹配的笔记，换个筛选试试</li>
       {% endfor %}
     </ul>
 
     {% if total_pages > 1 %}
     <div class="pager">
-      {% if page > 1 %}<a href="?{% if selected_company %}company={{ selected_company }}&{% endif %}{% if q %}q={{ q }}&{% endif %}page={{ page - 1 }}">‹ 上一页</a>{% endif %}
-      {% if page < total_pages %}<a href="?{% if selected_company %}company={{ selected_company }}&{% endif %}{% if q %}q={{ q }}&{% endif %}page={{ page + 1 }}">下一页 ›</a>{% endif %}
+      {% if page > 1 %}<a href="{{ qs({'page': page - 1}) }}">‹ 上一页</a>{% endif %}
+      {% if page < total_pages %}<a href="{{ qs({'page': page + 1}) }}">下一页 ›</a>{% endif %}
     </div>
     {% endif %}
   </section>

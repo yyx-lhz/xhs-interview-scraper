@@ -23,6 +23,7 @@ from .extractor import (
     extract_from_html,
     note_id_from_url,
 )
+from .positions import detect_positions
 
 
 async def _human_pause(min_s: float = config.MIN_DELAY_SEC, max_s: float = config.MAX_DELAY_SEC) -> None:
@@ -169,6 +170,7 @@ async def scrape_note_detail(context: BrowserContext, url: str) -> dict | None:
                     comments: intCount(ii.commentCount),
                     images: imgs,
                     tags: tags,
+                    published_ts: (typeof n.time === 'number') ? n.time : null,
                     published_at: n.time ? String(n.time) : null
                 };
             }""",
@@ -178,6 +180,9 @@ async def scrape_note_detail(context: BrowserContext, url: str) -> dict | None:
             slim["note_id"] = nid
             slim["url"] = url
             slim["raw"] = None
+            slim["positions"] = detect_positions(
+                [slim.get("title", ""), slim.get("content", ""), " ".join(slim.get("tags") or [])]
+            )
             return slim
 
         # DOM fallback when state lookup didn't give us text
@@ -185,6 +190,10 @@ async def scrape_note_detail(context: BrowserContext, url: str) -> dict | None:
         data = extract_from_html(html)
         data["note_id"] = nid
         data["url"] = url
+        data["positions"] = detect_positions(
+            [data.get("title", ""), data.get("content", ""), " ".join(data.get("tags") or [])]
+        )
+        data["published_ts"] = None
         return data
     except Exception as e:
         print(f"[scrape] note {nid} failed: {e!r}")

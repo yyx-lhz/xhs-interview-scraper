@@ -66,6 +66,19 @@ code { background: #efece6; padding: 1px 6px; border-radius: 4px; }
   color: #555;
 }
 
+.filter-group { margin-bottom: 20px; }
+.filter-group h3 { margin: 0 0 8px; font-size: 13px; color: #888; letter-spacing: 1px; }
+.chip-list { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.chip-list li a {
+  display: inline-flex; align-items: center; padding: 4px 10px;
+  background: #fff; border: 1px solid #ebe5da; border-radius: 999px;
+  color: #555; font-size: 12px;
+}
+.chip-list li.active a { background: #d33b3b; color: #fff; border-color: #d33b3b; }
+.chip-list li.dim a { color: #c5bfb5; }
+.chip-list .count { margin-left: 4px; color: inherit; opacity: 0.7; font-size: 11px; }
+.badge.alt { background: #e8f0fe; color: #3066c0; }
+
 .note-detail {
   max-width: 800px; margin: 24px auto; padding: 0 24px;
 }
