@@ -51,9 +51,9 @@ def index(
         notes = s.exec(stmt.offset((page - 1) * page_size).limit(page_size)).all()
 
     return templates.TemplateResponse(
+        request,
         "index.html",
         {
-            "request": request,
             "notes": notes,
             "companies": _company_counts(),
             "selected_company": company,
@@ -72,7 +72,7 @@ def note_detail(request: Request, note_id: str):
         note = s.exec(select(Note).where(Note.note_id == note_id)).first()
     if not note:
         raise HTTPException(404, "Note not found")
-    return templates.TemplateResponse("note.html", {"request": request, "note": note})
+    return templates.TemplateResponse(request, "note.html", {"note": note})
 
 
 @app.get("/api/notes")

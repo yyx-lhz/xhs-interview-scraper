@@ -65,32 +65,48 @@ async def ensure_logged_in(context: BrowserContext) -> None:
 async def collect_search_note_urls(page: Page, keyword: str, max_notes: int) -> list[str]:
     url = config.SEARCH_URL.format(kw=urllib.parse.quote(keyword))
     await page.goto(url, wait_until="domcontentloaded")
-    await asyncio.sleep(2.0)
+    await asyncio.sleep(2.5)
 
-    seen: set[str] = set()
+    # Map note_id -> best detail URL (one carrying xsec_token if available).
+    by_id: dict[str, str] = {}
     stale_rounds = 0
     max_stale_rounds = 5
 
-    while len(seen) < max_notes and stale_rounds < max_stale_rounds:
+    def _build_detail_url(nid: str, raw_href: str) -> str:
+        """Rebuild as /explore/{nid}?xsec_token=...&xsec_source=pc_search if token present."""
+        parsed = urllib.parse.urlparse(raw_href)
+        qs = urllib.parse.parse_qs(parsed.query)
+        token = (qs.get("xsec_token") or [""])[0]
+        source = (qs.get("xsec_source") or ["pc_search"])[0] or "pc_search"
+        if token:
+            return (
+                f"https://www.xiaohongshu.com/explore/{nid}"
+                f"?xsec_token={urllib.parse.quote(token)}&xsec_source={urllib.parse.quote(source)}"
+            )
+        return f"https://www.xiaohongshu.com/explore/{nid}"
+
+    while len(by_id) < max_notes and stale_rounds < max_stale_rounds:
         hrefs: list[str] = await page.evaluate(
-            """() => Array.from(document.querySelectorAll('a[href*="/explore/"], a[href*="/search_result/"]'))
-                       .map(a => a.href)"""
+            """() => Array.from(document.querySelectorAll('a'))
+                       .map(a => a.getAttribute('href'))
+                       .filter(h => h && (h.includes('/explore/') || h.includes('/search_result/')))"""
         )
-        before = len(seen)
+        before = len(by_id)
         for h in hrefs:
+            if not h:
+                continue
             nid = note_id_from_url(h)
             if not nid:
                 continue
-            normalized = f"https://www.xiaohongshu.com/explore/{nid}"
-            # Preserve xsec_token in original href if present — XHS needs it for access
-            if "xsec_token" in h:
-                normalized = h
-            if normalized not in seen:
-                seen.add(normalized)
-                if len(seen) >= max_notes:
-                    break
+            candidate = _build_detail_url(nid, h)
+            current = by_id.get(nid)
+            # Prefer urls that carry xsec_token
+            if not current or ("xsec_token" in candidate and "xsec_token" not in current):
+                by_id[nid] = candidate
+            if len(by_id) >= max_notes:
+                break
 
-        if len(seen) == before:
+        if len(by_id) == before:
             stale_rounds += 1
         else:
             stale_rounds = 0
@@ -98,7 +114,7 @@ async def collect_search_note_urls(page: Page, keyword: str, max_notes: int) -> 
         await page.mouse.wheel(0, 3000)
         await asyncio.sleep(config.SCROLL_DELAY_SEC + random.uniform(0, 0.8))
 
-    return list(seen)[:max_notes]
+    return list(by_id.values())[:max_notes]
 
 
 async def scrape_note_detail(context: BrowserContext, url: str) -> dict | None:
@@ -110,14 +126,61 @@ async def scrape_note_detail(context: BrowserContext, url: str) -> dict | None:
         await page.goto(url, wait_until="domcontentloaded", timeout=45_000)
         await asyncio.sleep(2.0 + random.uniform(0, 1.5))
 
-        state = await page.evaluate("() => window.__INITIAL_STATE__ || null")
-        if isinstance(state, dict):
-            data = extract_from_initial_state(state, nid)
-            if data:
-                data["note_id"] = nid
-                data["url"] = url
-                return data
+        # Extract in-browser to avoid serializing the whole circular state.
+        slim = await page.evaluate(
+            """(noteId) => {
+                const s = window.__INITIAL_STATE__;
+                if (!s) return null;
+                const dm = s.note && s.note.noteDetailMap;
+                if (!dm) return null;
+                const entry = dm[noteId] || dm[Object.keys(dm)[0]];
+                if (!entry) return null;
+                const n = entry.note || entry;
+                if (!n || typeof n !== 'object') return null;
 
+                const intCount = (v) => {
+                    if (v == null) return 0;
+                    if (typeof v === 'number') return v;
+                    const s = String(v).replace(/,/g, '').trim();
+                    const m = s.match(/([\\d.]+)\\s*(w|万|k)?/i);
+                    if (!m) return 0;
+                    let num = parseFloat(m[1]);
+                    const u = (m[2] || '').toLowerCase();
+                    if (u === 'w' || u === '万') num *= 10000;
+                    else if (u === 'k') num *= 1000;
+                    return Math.floor(num);
+                };
+
+                const imgs = (n.imageList || []).map(i =>
+                    i.urlDefault || i.url || (i.infoList && i.infoList[0] && i.infoList[0].url) || ''
+                ).filter(Boolean);
+
+                const tags = (n.tagList || []).map(t => t.name).filter(Boolean);
+                const ii = n.interactInfo || {};
+                const u = n.user || {};
+
+                return {
+                    title: n.title || '',
+                    content: n.desc || '',
+                    author_id: String(u.userId || ''),
+                    author_name: u.nickname || '',
+                    likes: intCount(ii.likedCount),
+                    collects: intCount(ii.collectedCount),
+                    comments: intCount(ii.commentCount),
+                    images: imgs,
+                    tags: tags,
+                    published_at: n.time ? String(n.time) : null
+                };
+            }""",
+            nid,
+        )
+        if slim and (slim.get("title") or slim.get("content")):
+            slim["note_id"] = nid
+            slim["url"] = url
+            slim["raw"] = None
+            return slim
+
+        # DOM fallback when state lookup didn't give us text
         html = await page.content()
         data = extract_from_html(html)
         data["note_id"] = nid

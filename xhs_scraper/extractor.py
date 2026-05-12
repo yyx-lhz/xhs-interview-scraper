@@ -119,5 +119,5 @@ def extract_from_html(html: str) -> dict:
 
 
 def note_id_from_url(url: str) -> str | None:
-    m = re.search(r"/(explore|discovery/item|item)/([0-9a-f]+)", url)
+    m = re.search(r"/(explore|discovery/item|item|search_result)/([0-9a-f]+)", url)
     return m.group(2) if m else None
