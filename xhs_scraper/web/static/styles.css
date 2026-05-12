@@ -1,0 +1,85 @@
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Arial, sans-serif;
+  background: #faf8f5;
+  color: #1f2328;
+  font-size: 14px;
+}
+a { color: #d33b3b; text-decoration: none; }
+a:hover { text-decoration: underline; }
+code { background: #efece6; padding: 1px 6px; border-radius: 4px; }
+
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 24px; background: #fff; border-bottom: 1px solid #ebe5da;
+  position: sticky; top: 0; z-index: 10;
+}
+.brand { font-weight: 700; font-size: 18px; color: #1f2328; }
+.topbar nav .nav-link { margin-left: 16px; color: #555; }
+
+.layout {
+  display: grid; grid-template-columns: 220px 1fr;
+  gap: 24px; max-width: 1200px; margin: 24px auto; padding: 0 24px;
+}
+.sidebar h3 { margin: 0 0 12px; font-size: 13px; color: #888; letter-spacing: 1px; }
+.company-list { list-style: none; padding: 0; margin: 0; }
+.company-list li { margin: 2px 0; }
+.company-list a {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 6px 10px; border-radius: 6px; color: #333;
+}
+.company-list a:hover { background: #f1ece2; text-decoration: none; }
+.company-list .active > a { background: #fde6e1; color: #d33b3b; font-weight: 600; }
+.count { color: #aaa; font-size: 12px; }
+
+.main { min-width: 0; }
+.search { display: flex; gap: 8px; margin-bottom: 16px; }
+.search input {
+  flex: 1; padding: 8px 12px; border: 1px solid #ddd; border-radius: 6px;
+  font-size: 14px; background: #fff;
+}
+.search button {
+  padding: 8px 18px; border: none; background: #d33b3b; color: #fff;
+  border-radius: 6px; cursor: pointer; font-weight: 600;
+}
+.meta { color: #888; margin-bottom: 12px; font-size: 13px; }
+
+.note-list { list-style: none; padding: 0; margin: 0; }
+.note-card {
+  background: #fff; border: 1px solid #ebe5da; border-radius: 10px;
+  padding: 14px 16px; margin-bottom: 10px;
+}
+.note-title { font-weight: 600; font-size: 15px; color: #1f2328; }
+.note-meta { display: flex; gap: 12px; align-items: center; margin: 6px 0; color: #777; font-size: 12px; flex-wrap: wrap; }
+.badge {
+  background: #fde6e1; color: #d33b3b; padding: 2px 8px; border-radius: 999px;
+  font-size: 11px; font-weight: 600;
+}
+.note-snippet { color: #555; margin: 6px 0 0; line-height: 1.6; }
+
+.empty { color: #888; padding: 40px; text-align: center; }
+
+.pager { display: flex; gap: 12px; justify-content: center; margin: 24px 0; }
+.pager a {
+  padding: 6px 14px; background: #fff; border: 1px solid #ddd; border-radius: 6px;
+  color: #555;
+}
+
+.note-detail {
+  max-width: 800px; margin: 24px auto; padding: 0 24px;
+}
+.note-detail .back { font-size: 13px; color: #888; }
+.note-detail h1 { font-size: 22px; margin: 8px 0 12px; }
+.note-detail .images { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin: 14px 0; }
+.note-detail .images img { width: 100%; border-radius: 8px; }
+.note-detail .content {
+  white-space: pre-wrap; word-break: break-word; line-height: 1.8; font-size: 14px;
+  background: #fff; padding: 16px; border-radius: 8px; border: 1px solid #ebe5da;
+  font-family: inherit;
+}
+.tags { margin: 8px 0; }
+.tag { color: #d33b3b; margin-right: 8px; font-size: 12px; }
+.source { margin-left: auto; }
+
+.footer { text-align: center; color: #999; padding: 24px 0; font-size: 12px; }

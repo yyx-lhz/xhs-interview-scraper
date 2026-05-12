@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="layout">
+  <aside class="sidebar">
+    <h3>公司</h3>
+    <ul class="company-list">
+      <li class="{% if not selected_company %}active{% endif %}">
+        <a href="/{% if q %}?q={{ q }}{% endif %}">全部</a>
+      </li>
+      {% for name, count in companies %}
+      <li class="{% if selected_company == name %}active{% endif %}">
+        <a href="/?company={{ name }}{% if q %}&q={{ q }}{% endif %}">
+          {{ name }} <span class="count">{{ count }}</span>
+        </a>
+      </li>
+      {% endfor %}
+    </ul>
+  </aside>
+
+  <section class="main">
+    <form class="search" method="get" action="/">
+      {% if selected_company %}<input type="hidden" name="company" value="{{ selected_company }}" />{% endif %}
+      <input type="text" name="q" placeholder="搜标题/正文…" value="{{ q }}" />
+      <button type="submit">搜索</button>
+    </form>
+
+    <div class="meta">
+      共 {{ total }} 条 · 第 {{ page }} / {{ total_pages }} 页
+      {% if selected_company %}· 公司：<b>{{ selected_company }}</b>{% endif %}
+      {% if q %}· 关键字：<b>{{ q }}</b>{% endif %}
+    </div>
+
+    <ul class="note-list">
+      {% for n in notes %}
+      <li class="note-card">
+        <a href="/note/{{ n.note_id }}" class="note-title">{{ n.title or '(无标题)' }}</a>
+        <div class="note-meta">
+          <span class="badge">{{ n.company }}</span>
+          <span>👍 {{ n.likes }}</span>
+          <span>💬 {{ n.comments }}</span>
+          <span>⭐ {{ n.collects }}</span>
+          {% if n.author_name %}<span>· {{ n.author_name }}</span>{% endif %}
+        </div>
+        <p class="note-snippet">{{ (n.content or '')[:160] }}{% if (n.content or '')|length > 160 %}…{% endif %}</p>
+      </li>
+      {% else %}
+      <li class="empty">还没有数据，先跑 <code>xhs scrape</code></li>
+      {% endfor %}
+    </ul>
+
+    {% if total_pages > 1 %}
+    <div class="pager">
+      {% if page > 1 %}<a href="?{% if selected_company %}company={{ selected_company }}&{% endif %}{% if q %}q={{ q }}&{% endif %}page={{ page - 1 }}">‹ 上一页</a>{% endif %}
+      {% if page < total_pages %}<a href="?{% if selected_company %}company={{ selected_company }}&{% endif %}{% if q %}q={{ q }}&{% endif %}page={{ page + 1 }}">下一页 ›</a>{% endif %}
+    </div>
+    {% endif %}
+  </section>
+</div>
+{% endblock %}

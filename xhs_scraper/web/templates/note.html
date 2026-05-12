@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ note.title or note.note_id }}{% endblock %}
+{% block content %}
+<article class="note-detail">
+  <a class="back" href="javascript:history.back()">← 返回</a>
+  <h1>{{ note.title or '(无标题)' }}</h1>
+  <div class="note-meta">
+    <span class="badge">{{ note.company }}</span>
+    <span>👍 {{ note.likes }}</span>
+    <span>💬 {{ note.comments }}</span>
+    <span>⭐ {{ note.collects }}</span>
+    {% if note.author_name %}<span>作者：{{ note.author_name }}</span>{% endif %}
+    <a class="source" href="{{ note.url }}" target="_blank" rel="noopener">原文 ↗</a>
+  </div>
+
+  {% if note.tags %}
+  <div class="tags">
+    {% for tag in note.tags %}<span class="tag">#{{ tag }}</span>{% endfor %}
+  </div>
+  {% endif %}
+
+  {% if note.images %}
+  <div class="images">
+    {% for img in note.images %}
+      <img src="{{ img }}" loading="lazy" referrerpolicy="no-referrer" />
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <pre class="content">{{ note.content }}</pre>
+</article>
+{% endblock %}
